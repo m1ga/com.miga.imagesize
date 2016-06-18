@@ -1,0 +1,5 @@
+<module>com.miga.imagesize</module>
+
+
+var is = require("com.miga.imagesize");
+console.log( is.getSize({image:"/images/test.jpg"}));

@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import org.appcelerator.titanium.util.TiUIHelper;
 import android.graphics.Bitmap;
 import java.io.IOException;
+import java.io.File;
 
 @Kroll.module(name="TiImagesize", id="com.miga.imagesize")
 public class TiImagesizeModule extends KrollModule
@@ -50,35 +51,37 @@ public class TiImagesizeModule extends KrollModule
 	
 	// Properties
 	@Kroll.method
-	public KrollDict getSize(KrollDict d)
-	{
-                super.processProperties(d);
-                String imageSrc="";
-                if (d.containsKey("image")) {
-    			imageSrc = d.getString("image");
-                }
-                
-                String url = resolveUrl(null, imageSrc);
-                KrollDict kd = new KrollDict();
-                
-                
-                try {
-                    TiBaseFile file = TiFileFactory.createTitaniumFile(new String[] {url}, false);                    
-                    BitmapFactory.Options options = new BitmapFactory.Options();    
-                    options.inJustDecodeBounds = true;
-                    BitmapFactory.decodeStream(file.getInputStream(), null,options);
-                    int width = options.outWidth;
-                    int height = options.outHeight;
+	public KrollDict getSize(KrollDict d){
+		super.processProperties(d);
+		String imageSrc="";
+		if (d.containsKey("image")) {
+			imageSrc = d.getString("image");
+		}
 
-                    kd.put("width", width);
-                    kd.put("height", height);
-                } catch (IOException e) {
-                    Log.e("ImageSize", "File not found");
-                    kd.put("width", 0);
-                    kd.put("height", 0);
-                }
-                return kd;
+		String url = resolveUrl(null, imageSrc);
+		KrollDict kd = new KrollDict();
+
+		try {
+			TiBaseFile file = TiFileFactory.createTitaniumFile(new String[] {url}, false);                    
+			BitmapFactory.Options options = new BitmapFactory.Options();    
+			options.inJustDecodeBounds = true;
+			if (url.contains("http:") || url.contains("https:")) {
+				BitmapFactory.decodeStream(new java.net.URL(url).openStream(), null,options);
+			} else {
+				BitmapFactory.decodeStream(file.getInputStream(), null,options);
+			}
+			
+			int width = options.outWidth;
+			int height = options.outHeight;
+
+			kd.put("width", width);
+			kd.put("height", height);
+		} catch (IOException e) {
+			Log.e("ImageSize", "File not found");
+			kd.put("width", 0);
+			kd.put("height", 0);
+		}
+		return kd;
 	}
 
 }
-

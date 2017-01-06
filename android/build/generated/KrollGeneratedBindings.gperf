@@ -1,0 +1,16 @@
+%define lookup-function-name lookupGeneratedInit
+%define class-name TiImagesizeBindings
+%{
+
+#include <string.h>
+#include <v8.h>
+#include <KrollBindings.h>
+
+#include "com.miga.imagesize.TiImagesizeModule.h"
+
+
+%}
+struct titanium::bindings::BindEntry;
+%%
+com.miga.imagesize.TiImagesizeModule, ::com::miga::imagesize::TiImagesizeModule::bindProxy, ::com::miga::imagesize::TiImagesizeModule::dispose
+%%

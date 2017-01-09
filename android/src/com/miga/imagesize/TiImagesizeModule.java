@@ -33,6 +33,8 @@ public class TiImagesizeModule extends KrollModule
 	// Standard Debugging variables
 	private static final String LCAT = "TiImagesizeModule";
 	private static final boolean DBG = TiConfig.LOGD;
+	private String imgUrl = "";
+	private String imgId = "";
 
 	// You can define constants with @Kroll.constant, for example:
 	// @Kroll.constant public static final String EXTERNAL_NAME = value;
@@ -48,40 +50,72 @@ public class TiImagesizeModule extends KrollModule
 		// put module init code that needs to run when the application is created
 	}
 
-	
+
 	// Properties
 	@Kroll.method
-	public KrollDict getSize(KrollDict d){
+	public void getSize(KrollDict d){
 		super.processProperties(d);
 		String imageSrc="";
 		if (d.containsKey("image")) {
 			imageSrc = d.getString("image");
 		}
+		if (d.containsKey("id")) {
+			imgId = d.getString("id");
+		}
 
-		String url = resolveUrl(null, imageSrc);
+		imgUrl = resolveUrl(null, imageSrc);
 		KrollDict kd = new KrollDict();
+		BitmapFactory.Options options = new BitmapFactory.Options();
 
 		try {
-			TiBaseFile file = TiFileFactory.createTitaniumFile(new String[] {url}, false);                    
-			BitmapFactory.Options options = new BitmapFactory.Options();    
+			TiBaseFile file = TiFileFactory.createTitaniumFile(new String[] {imgUrl}, false);
 			options.inJustDecodeBounds = true;
-			if (url.contains("http:") || url.contains("https:")) {
-				BitmapFactory.decodeStream(new java.net.URL(url).openStream(), null,options);
+			if (imgUrl.contains("http:") || imgUrl.contains("https:")) {
+
+				Thread thread = new Thread(new Runnable() {
+					@Override
+					public void run() {
+						try  {
+							BitmapFactory.Options options = new BitmapFactory.Options();
+							BitmapFactory.decodeStream(new java.net.URL(imgUrl).openStream(), null,options);
+							int width = options.outWidth;
+							int height = options.outHeight;
+
+							KrollDict kd = new KrollDict();
+							kd.put("id", imgId);
+							kd.put("width", width);
+							kd.put("height", height);
+							kd.put("image",imgUrl);
+							kd.put("error",false);
+							fireEvent("imageSize", kd);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				});
+
+				thread.start();
+
 			} else {
 				BitmapFactory.decodeStream(file.getInputStream(), null,options);
-			}
-			
-			int width = options.outWidth;
-			int height = options.outHeight;
+				int width = options.outWidth;
+				int height = options.outHeight;
 
-			kd.put("width", width);
-			kd.put("height", height);
+				kd.put("id", imgId);
+				kd.put("width", width);
+				kd.put("height", height);
+				kd.put("image",imgUrl);
+				kd.put("error",false);
+				fireEvent("imageSize", kd);
+			}
 		} catch (IOException e) {
 			Log.e("ImageSize", "File not found");
+			kd.put("id", imgId);
 			kd.put("width", 0);
 			kd.put("height", 0);
+			kd.put("error",true);
+			fireEvent("imageSize", kd);
 		}
-		return kd;
-	}
 
+	}
 }

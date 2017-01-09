@@ -2,5 +2,9 @@
 
 
 var is = require("com.miga.imagesize");
-console.log( is.getSize({image:"/images/test.jpg"}));
-console.log( is.getSize({image:"https://de.wikipedia.org/static/images/project-logos/dewiki.png"}));
+is.getSize({image:"/images/test.jpg"});
+is.getSize({image:"https://de.wikipedia.org/static/images/project-logos/dewiki.png"});
+
+is.addEventListener("imageSize",function(e){
+    console.log(e);
+});

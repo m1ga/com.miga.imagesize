@@ -18,7 +18,7 @@ namespace imagesize {
 class TiImagesizeModule : public titanium::Proxy
 {
 public:
-	explicit TiImagesizeModule(jobject javaObject);
+	explicit TiImagesizeModule();
 
 	static void bindProxy(v8::Local<v8::Object>, v8::Local<v8::Context>);
 	static v8::Local<v8::FunctionTemplate> getProxyTemplate(v8::Isolate*);

@@ -50,10 +50,10 @@ static void TiImagesize_getBinding(const FunctionCallbackInfo<Value>& args)
 		return;
 	}
 
-	titanium::Utf8Value bindingValue(binding);
+	v8::String::Utf8Value bindingValue(binding);
 	LOGD(TAG, "Looking up binding: %s", *bindingValue);
 
-	titanium::bindings::BindEntry *extBinding = ::TiImagesizeBindings::lookupGeneratedInit(
+	titanium::bindings::BindEntry *extBinding = titanium::bindings::TiImagesizeBindings::lookupGeneratedInit(
 		*bindingValue, bindingValue.length());
 
 	if (!extBinding) {
@@ -82,6 +82,7 @@ static void TiImagesize_init(Local<Object> exports, Local<Context> context)
 
 		exports->Set(name, source);
 	}
+
 	Local<FunctionTemplate> constructor = FunctionTemplate::New(isolate, TiImagesize_getBinding);
 	exports->Set(String::NewFromUtf8(isolate, "getBinding"), constructor->GetFunction(context).ToLocalChecked());
 }
@@ -97,11 +98,11 @@ static void TiImagesize_dispose(Isolate* isolate)
 	uint32_t length = propertyNames->Length();
 
 	for (uint32_t i = 0; i < length; ++i) {
-		titanium::Utf8Value binding(propertyNames->Get(i));
+		v8::String::Utf8Value binding(propertyNames->Get(i));
 		int bindingLength = binding.length();
 
 		titanium::bindings::BindEntry *extBinding =
-			::TiImagesizeBindings::lookupGeneratedInit(*binding, bindingLength);
+			titanium::bindings::TiImagesizeBindings::lookupGeneratedInit(*binding, bindingLength);
 
 		if (extBinding && extBinding->dispose) {
 			extBinding->dispose(isolate);
@@ -123,5 +124,5 @@ Java_com_miga_imagesize_TiImagesizeBootstrap_nativeBootstrap
 	(JNIEnv *env, jobject self)
 {
 	titanium::KrollBindings::addExternalBinding("com.miga.imagesize", &TiImagesizeBinding);
-	titanium::KrollBindings::addExternalLookup(&(::TiImagesizeBindings::lookupGeneratedInit));
+	titanium::KrollBindings::addExternalLookup(&(titanium::bindings::TiImagesizeBindings::lookupGeneratedInit));
 }

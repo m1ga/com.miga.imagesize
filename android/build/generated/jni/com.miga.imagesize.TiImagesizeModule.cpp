@@ -1,6 +1,6 @@
 /**
  * Appcelerator Titanium Mobile
- * Copyright (c) 2011-2016 by Appcelerator, Inc. All Rights Reserved.
+ * Copyright (c) 2011-2017 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
  */
@@ -10,11 +10,8 @@
 #include "com.miga.imagesize.TiImagesizeModule.h"
 
 #include "AndroidUtil.h"
-#include "EventEmitter.h"
 #include "JNIUtil.h"
 #include "JSException.h"
-#include "Proxy.h"
-#include "ProxyFactory.h"
 #include "TypeConverter.h"
 #include "V8Util.h"
 
@@ -35,7 +32,7 @@ namespace imagesize {
 Persistent<FunctionTemplate> TiImagesizeModule::proxyTemplate;
 jclass TiImagesizeModule::javaClass = NULL;
 
-TiImagesizeModule::TiImagesizeModule(jobject javaObject) : titanium::Proxy(javaObject)
+TiImagesizeModule::TiImagesizeModule() : titanium::Proxy()
 {
 }
 
@@ -44,9 +41,22 @@ void TiImagesizeModule::bindProxy(Local<Object> exports, Local<Context> context)
 	Isolate* isolate = context->GetIsolate();
 
 	Local<FunctionTemplate> pt = getProxyTemplate(isolate);
-	Local<Function> proxyConstructor = pt->GetFunction(context).ToLocalChecked();
+
+	v8::TryCatch tryCatch(isolate);
+	Local<Function> constructor;
+	MaybeLocal<Function> maybeConstructor = pt->GetFunction(context);
+	if (!maybeConstructor.ToLocal(&constructor)) {
+		titanium::V8Util::fatalException(isolate, tryCatch);
+		return;
+	}
+
 	Local<String> nameSymbol = NEW_SYMBOL(isolate, "TiImagesize"); // use symbol over string for efficiency
-	Local<Object> moduleInstance = proxyConstructor->NewInstance(context).ToLocalChecked();
+	MaybeLocal<Object> maybeInstance = constructor->NewInstance(context);
+	Local<Object> moduleInstance;
+	if (!maybeInstance.ToLocal(&moduleInstance)) {
+		titanium::V8Util::fatalException(isolate, tryCatch);
+		return;
+	}
 	exports->Set(nameSymbol, moduleInstance);
 }
 
@@ -66,7 +76,7 @@ Local<FunctionTemplate> TiImagesizeModule::getProxyTemplate(Isolate* isolate)
 		return proxyTemplate.Get(isolate);
 	}
 
-	LOGD(TAG, "GetProxyTemplate");
+	LOGD(TAG, "TiImagesizeModule::getProxyTemplate()");
 
 	javaClass = titanium::JNIUtil::findClass("com/miga/imagesize/TiImagesizeModule");
 	EscapableHandleScope scope(isolate);
@@ -80,9 +90,7 @@ Local<FunctionTemplate> TiImagesizeModule::getProxyTemplate(Isolate* isolate)
 
 	proxyTemplate.Reset(isolate, t);
 	t->Set(titanium::Proxy::inheritSymbol.Get(isolate),
-		FunctionTemplate::New(isolate, titanium::Proxy::inherit<TiImagesizeModule>)->GetFunction());
-
-	titanium::ProxyFactory::registerProxyPair(javaClass, *t);
+		FunctionTemplate::New(isolate, titanium::Proxy::inherit<TiImagesizeModule>));
 
 	// Method bindings --------------------------------------------------------
 	titanium::SetProtoMethod(isolate, t, "getSize", TiImagesizeModule::getSize);
@@ -117,9 +125,9 @@ void TiImagesizeModule::getSize(const FunctionCallbackInfo<Value>& args)
 	}
 	static jmethodID methodID = NULL;
 	if (!methodID) {
-		methodID = env->GetMethodID(TiImagesizeModule::javaClass, "getSize", "(Lorg/appcelerator/kroll/KrollDict;)Lorg/appcelerator/kroll/KrollDict;");
+		methodID = env->GetMethodID(TiImagesizeModule::javaClass, "getSize", "(Lorg/appcelerator/kroll/KrollDict;)V");
 		if (!methodID) {
-			const char *error = "Couldn't find proxy method 'getSize' with signature '(Lorg/appcelerator/kroll/KrollDict;)Lorg/appcelerator/kroll/KrollDict;'";
+			const char *error = "Couldn't find proxy method 'getSize' with signature '(Lorg/appcelerator/kroll/KrollDict;)V'";
 			LOGE(TAG, error);
 				titanium::JSException::Error(isolate, error);
 				return;
@@ -132,7 +140,7 @@ void TiImagesizeModule::getSize(const FunctionCallbackInfo<Value>& args)
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
 
-	titanium::Proxy* proxy = titanium::Proxy::unwrap(holder);
+	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
 
 	if (args.Length() < 1) {
 		char errorStringBuffer[100];
@@ -159,13 +167,9 @@ void TiImagesizeModule::getSize(const FunctionCallbackInfo<Value>& args)
 	}
 
 	jobject javaProxy = proxy->getJavaObject();
-	jobject jResult = (jobject)env->CallObjectMethodA(javaProxy, methodID, jArguments);
+	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
-
-
-	if (!JavaObject::useGlobalRefs) {
-		env->DeleteLocalRef(javaProxy);
-	}
+	proxy->unreferenceJavaObject(javaProxy);
 
 
 
@@ -175,22 +179,14 @@ void TiImagesizeModule::getSize(const FunctionCallbackInfo<Value>& args)
 
 
 	if (env->ExceptionCheck()) {
-		Local<Value> jsException = titanium::JSException::fromJavaException(isolate);
+		titanium::JSException::fromJavaException(isolate);
 		env->ExceptionClear();
-		return;
 	}
 
-	if (jResult == NULL) {
-		args.GetReturnValue().Set(Null(isolate));
-		return;
-	}
-
-	Local<Value> v8Result = titanium::TypeConverter::javaObjectToJsValue(isolate, env, jResult);
-
-	env->DeleteLocalRef(jResult);
 
 
-	args.GetReturnValue().Set(v8Result);
+
+	args.GetReturnValue().Set(v8::Undefined(isolate));
 
 }
 
